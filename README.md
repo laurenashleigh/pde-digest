@@ -1,96 +1,103 @@
 # pde-digest
 
-A daily Slack digest workflow for the Grafana Product Design Engineering team. It reads recent activity from a configured set of channels, summarizes it with Claude, and DMs the result to you.
+A daily Slack digest for the Grafana Product Design Engineering team. It reads recent activity from a configured set of channels, summarizes it with Claude, and posts the result to Slack.
 
-Runs on GitHub Actions on a schedule (and on demand via the **Run workflow** button), so it doesn't depend on any process running on your laptop.
+Runs on GitHub Actions on a schedule (and on demand via the **Run workflow** button), so it doesn't depend on any process running on a laptop.
 
 ## How it works
 
-1. A GitHub Actions cron fires once a day (or you trigger it manually).
+1. A GitHub Actions cron fires once a day (Mon–Fri, 08:57 UTC by default).
 2. The workflow installs Node deps and runs `src/digest.js`.
-3. The script reads the last `lookback_hours` of messages from each channel in `config.json` via the Slack API.
+3. The script reads the last `lookback_hours` of messages from each channel in `config.json` via the Slack API (using a bot token).
 4. It sends the raw activity to the Anthropic API and asks Claude to produce a scannable digest.
-5. It DMs the digest to the recipient user ID via Slack.
+5. It posts the digest to the channel (or DM) configured in `DIGEST_CHANNEL_ID`.
 
-## Fork-and-configure setup
+## Architecture
 
-This repo is designed to be **forked**. Each team member runs their own copy with their own Slack token, their own Anthropic API key, and their own channel list.
+Single bot, single repo, single set of secrets. One person (the maintainer) owns the setup. Teammates don't have to do anything — they just see the digest appear in whichever channel the bot is configured to post to.
 
-### 1. Fork the repo
+### Two-phase rollout
 
-Click **Fork** at the top of this page. You can keep your fork public — no secrets live in source.
+**Phase 1 — bot DMs you only.** `DIGEST_CHANNEL_ID` is set to your own Slack user ID. The bot posts the digest as a DM, visible only to you. Use this to validate the workflow end-to-end and refine the digest format before involving the team.
 
-### 2. Create a Slack app and get a user token
+**Phase 2 — bot posts to a team channel.** Once you've verified the digest is useful, change `DIGEST_CHANNEL_ID` to a Slack channel ID, invite the bot to that channel, and the same workflow now posts there for the whole team. **No code change** — just one config flip.
 
-You need a Slack token with read access to the channels you want summarized and write access for DMs.
+## One-time setup (maintainer only)
 
-1. Go to <https://api.slack.com/apps> → **Create New App** → **From scratch**.
-2. Name it something like `personal-digest-<yourname>`. Select the Grafana workspace.
-3. Under **OAuth & Permissions**, add these **User Token Scopes**:
-   - `channels:history` — read public channel messages
-   - `groups:history` — read private channel messages
-   - `im:write` — DM yourself
-   - `users:read` — resolve user IDs to names
-   - `chat:write` — post the digest
-4. Click **Install to Workspace** at the top of the OAuth page.
-   - If the Grafana workspace requires admin approval for custom apps, you'll see a "request to install" flow — submit it and wait for approval.
-5. After install, copy the **User OAuth Token** (starts with `xoxp-`). This is your `SLACK_USER_TOKEN`.
+### 1. Create the Slack app from the manifest
 
-> The user token has the same Slack access you do. Treat it like a password.
+1. Go to <https://api.slack.com/apps> → **Create New App** → **From an app manifest**.
+2. Select the Grafana workspace.
+3. Paste the contents of [`slack-app-manifest.yaml`](./slack-app-manifest.yaml) into the YAML field. Click **Next** → **Create**.
+4. Click **Install to Workspace** at the top.
+   - If Grafana requires admin approval for custom apps, you'll see a "request to install" flow. Submit and wait for approval.
+5. After install, copy the **Bot User OAuth Token** (starts with `xoxb-`). This is your `SLACK_BOT_TOKEN`.
 
-### 3. Get an Anthropic API key
+> The bot token grants the scopes in the manifest: read channel history (in channels the bot is in), post messages, and look up user info. It does *not* grant read access to channels the bot hasn't been added to — see step 4.
 
-Either:
+### 2. Get an Anthropic API key
 
-- Use your personal Anthropic account: <https://console.anthropic.com/> → **Settings** → **API Keys** → **Create Key**.
-- Or, if Grafana has a workspace/team Anthropic account you can use, request a key there.
+1. Go to <https://console.anthropic.com/> → **Settings** → **API Keys** → **Create Key**.
+2. Set up billing if you haven't already. Daily digest cost is well under $0.10.
 
-Per-run cost is a few cents at most — the digest call is one API request per day.
+### 3. Find your Slack user ID (for phase 1)
 
-### 4. Find your own Slack user ID
+Open your profile in Slack → **More** → **Copy member ID**. It looks like `U093MB60HCM`. This is your `DIGEST_CHANNEL_ID` for phase 1.
 
-Open your profile in Slack → **More** → **Copy member ID**. It looks like `U093MB60HCM`. This is your `RECIPIENT_USER_ID`.
+### 4. Invite the bot to every channel you want summarized
 
-### 5. Add the values to your fork
+Bots can only read channels they're members of. For each channel in `config.json`, run `/invite @PDE Digest` in that channel.
 
-In your fork on GitHub: **Settings** → **Secrets and variables** → **Actions**.
+| Channel | Action |
+|---|---|
+| Public channels | Anyone can invite the bot |
+| Private channels | A current member must invite the bot |
+
+If you skip this for a channel, that channel will show as `not_in_channel` in the run logs and be excluded from the digest.
+
+### 5. Add the values to the repo
+
+In GitHub: **Settings → Secrets and variables → Actions**.
 
 | Name | Type | Value |
 |---|---|---|
-| `SLACK_USER_TOKEN` | Repository secret | `xoxp-...` from step 2 |
-| `ANTHROPIC_API_KEY` | Repository secret | from step 3 |
-| `RECIPIENT_USER_ID` | Repository variable | your Slack user ID from step 4 |
+| `SLACK_BOT_TOKEN` | Repository secret | `xoxb-...` from step 1 |
+| `ANTHROPIC_API_KEY` | Repository secret | from step 2 |
+| `DIGEST_CHANNEL_ID` | Repository variable | your Slack user ID (phase 1) |
 
-`RECIPIENT_USER_ID` is a **variable** (not a secret) because it's not sensitive — anyone in the workspace can see your user ID.
+`DIGEST_CHANNEL_ID` is a **variable** (not a secret) because it's not sensitive and you'll want to change it for phase 2.
 
-### 6. Edit `config.json` for your channels
+### 6. Run it once manually to test
 
-`config.json` ships with the PDE team's channels. To use different channels:
+**Actions tab → Daily Digest → Run workflow** (top right). Watch the run log; if it succeeds you should get a DM from the bot within ~30 seconds.
 
-- `channels` — array of `{ id, name }`. You can find a channel's ID by right-clicking the channel in Slack and choosing **View channel details** → scroll to the bottom.
+## Going to phase 2 (posting to a team channel)
+
+When you're ready to share the digest with your team:
+
+1. Pick a target channel. A dedicated channel like `#pde-digest` is cleanest; an existing team channel works too.
+2. Invite the bot to the channel: `/invite @PDE Digest`.
+3. Get the channel ID: right-click the channel → **View channel details** → scroll to the bottom.
+4. Update the `DIGEST_CHANNEL_ID` repository variable to the channel ID.
+5. (Optional) Trigger a manual run to confirm.
+
+That's the whole switch — no code change.
+
+## Configuration
+
+`config.json`:
+
+- `channels` — array of `{ id, name }` to summarize. Bot must be invited to each.
 - `lookback_hours` — how far back to read. Default 24.
 - `model` — Anthropic model ID. Default `claude-opus-4-7`.
 
-Commit the change to your fork's `main` branch.
+`.github/workflows/digest.yml`:
 
-### 7. Adjust the schedule (optional)
-
-`.github/workflows/digest.yml` runs at **08:57 UTC, Monday–Friday** by default.
-
-- For 09:00 BST (UTC+1, British summer time) → use `0 8 * * 1-5`.
-- For 09:00 GMT (winter) → use `0 9 * * 1-5`.
-- For daily (incl. weekends) → swap `1-5` for `*`.
-- GitHub cron is **UTC-only** and there's no DST awareness — you'll need to flip the value twice a year if you care about exactly 9am local.
-
-### 8. Run it once manually to test
-
-In your fork: **Actions** → **Daily Digest** → **Run workflow** (top right) → **Run workflow**.
-
-Check the run log for errors. If it succeeds, you should get a DM from yourself within ~30 seconds.
-
-## Triggering on demand
-
-You can run the workflow any time from the **Actions** tab using **Run workflow** (the `workflow_dispatch` trigger). There's also a GitHub Slack integration that exposes `/github workflow run` — if your workspace has it installed, you can fire the digest from inside Slack.
+- `cron` — runs at **08:57 UTC, Mon–Fri**.
+  - For 09:00 BST (UTC+1, British summer time): `0 8 * * 1-5`.
+  - For 09:00 GMT (winter): `0 9 * * 1-5`.
+  - For daily incl. weekends: `1-5` → `*`.
+  - GitHub cron is **UTC-only** and DST-unaware — flip the value twice a year if you care about exactly 9am local.
 
 ## Local development
 
@@ -98,26 +105,29 @@ You can run the workflow any time from the **Actions** tab using **Run workflow*
 nvm use         # or install Node 20+
 npm install
 
-export SLACK_USER_TOKEN=xoxp-...
+export SLACK_BOT_TOKEN=xoxb-...
 export ANTHROPIC_API_KEY=sk-ant-...
-export RECIPIENT_USER_ID=U...
+export DIGEST_CHANNEL_ID=U...     # your user ID for phase 1, channel ID for phase 2
 
 npm run digest
 ```
 
 ## Troubleshooting
 
-**`not_in_channel` or `channel_not_found` for a private channel**
-Your user token only sees private channels you're a member of. Either join the channel or remove it from `config.json`.
+**`not_in_channel`**
+The bot hasn't been invited to that channel. Run `/invite @PDE Digest` in the channel.
+
+**`channel_not_found`**
+The channel ID is wrong, or it's a private channel the bot can't see. For private channels, a member has to invite the bot.
 
 **`missing_scope`**
-You forgot one of the OAuth scopes in step 2. Reinstall the app after adding the missing scope.
+The bot is missing an OAuth scope. Compare the installed app's scopes against `slack-app-manifest.yaml` — if any are missing, reinstall the app after updating scopes.
 
-**No DM arrived but the workflow logged success**
-Check the run's log output for the `Posted: ts=...` line. If it's there, the message was posted — look in the DM with yourself (`Slackbot`/your own name in the sidebar). If your DM list is collapsed, the new message may not bump it to the top.
+**`not_allowed_token_type`**
+You're using a user token (`xoxp-`) instead of a bot token (`xoxb-`). Use the **Bot User OAuth Token** from the OAuth & Permissions page.
 
 **The summary is hallucinating links or facts**
-The model is told to use only the raw activity provided. If you're seeing fabrication, open an issue with the raw activity (from the run log) and the summary output.
+The model is instructed to only use the raw activity provided. Open an issue with the raw activity (from the run log) and the summary output if you see fabrication.
 
 ## License
 
