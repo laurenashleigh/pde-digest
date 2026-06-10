@@ -1,6 +1,6 @@
 ---
 name: pde-digest
-description: Generate a Slack digest of the last 24h activity across the 8 PDE team channels and DM it to the current user. Use when the user types /pde-digest or asks for "today's digest", "the digest", "summarize what's happening on PDE", etc.
+description: Generate a Slack digest of the last 24h activity across the 9 PDE team channels and DM it to the current user. Use when the user types /pde-digest or asks for "today's digest", "the digest", "summarize what's happening on PDE", etc.
 ---
 
 # PDE Digest
@@ -9,7 +9,7 @@ Generate a daily digest of recent Slack activity across the Product Design Engin
 
 ## Channels to read
 
-Read messages from the **last 24 hours** in each of these 8 channels using `mcp__plugin_slack_slack__slack_read_channel`:
+Read messages from the **last 24 hours** in each of these 9 channels using `mcp__plugin_slack_slack__slack_read_channel`:
 
 | ID | Name |
 |---|---|
@@ -21,8 +21,9 @@ Read messages from the **last 24 hours** in each of these 8 channels using `mcp_
 | `C01LBUD42LE` | `#team-product-design-private` |
 | `C0587R32AM9` | `#ai-at-grafana` |
 | `C091B7EHXNU` | `#grafana-ai-dev` |
+| `C0AT2GH7YDU` | `#wg-assistant-workspace` |
 
-**Compute the 24h cutoff** by running `date -v-24H +%s` in the shell, then pass the result as the `oldest` parameter on each `slack_read_channel` call. **Fetch all 8 channels in parallel** in a single tool batch.
+**Compute the 24h cutoff** by running `date -v-24H +%s` in the shell, then pass the result as the `oldest` parameter on each `slack_read_channel` call. **Fetch all 9 channels in parallel** in a single tool batch.
 
 ## Summarization
 
@@ -48,7 +49,7 @@ The DM should follow this structure:
 
 ```
 *PDE Daily Digest — YYYY-MM-DD*
-_Last 24h across 8 channels_
+_Last 24h across 9 channels_
 
 ---
 
