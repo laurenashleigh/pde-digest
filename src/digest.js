@@ -6,13 +6,13 @@ const config = JSON.parse(
   readFileSync(new URL("../config.json", import.meta.url), "utf8"),
 );
 
-const { SLACK_BOT_TOKEN, ANTHROPIC_API_KEY, DIGEST_CHANNEL_ID } = process.env;
+const { SLACK_USER_TOKEN, ANTHROPIC_API_KEY, RECIPIENT_USER_ID } = process.env;
 
-if (!SLACK_BOT_TOKEN) throw new Error("SLACK_BOT_TOKEN is required");
+if (!SLACK_USER_TOKEN) throw new Error("SLACK_USER_TOKEN is required");
 if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY is required");
-if (!DIGEST_CHANNEL_ID) throw new Error("DIGEST_CHANNEL_ID is required");
+if (!RECIPIENT_USER_ID) throw new Error("RECIPIENT_USER_ID is required");
 
-const slack = new WebClient(SLACK_BOT_TOKEN);
+const slack = new WebClient(SLACK_USER_TOKEN);
 const anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
 
 const lookbackHours = config.lookback_hours ?? 24;
@@ -122,9 +122,9 @@ async function main() {
   const today = new Date().toISOString().slice(0, 10);
   const message = `*Daily Slack Digest — ${today}*\n_Last ${lookbackHours}h across ${channelData.length} channels_\n\n${summary}`;
 
-  console.log(`Posting to ${DIGEST_CHANNEL_ID}...`);
+  console.log(`Posting to ${RECIPIENT_USER_ID}...`);
   const result = await slack.chat.postMessage({
-    channel: DIGEST_CHANNEL_ID,
+    channel: RECIPIENT_USER_ID,
     text: message,
   });
   console.log(`Posted: ts=${result.ts}`);

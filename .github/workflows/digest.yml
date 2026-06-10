@@ -23,7 +23,7 @@ jobs:
 
       - name: Run digest
         env:
-          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_USER_TOKEN: ${{ secrets.SLACK_USER_TOKEN }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          DIGEST_CHANNEL_ID: ${{ vars.DIGEST_CHANNEL_ID }}
+          RECIPIENT_USER_ID: ${{ vars.RECIPIENT_USER_ID }}
         run: npm run digest
