@@ -1,0 +1,14 @@
+{
+  "channels": [
+    { "id": "C09N762DJUE", "name": "team-product-design-engineering-private" },
+    { "id": "C091JCGU9T2", "name": "team-product-design-engineering" },
+    { "id": "C0B7Z1TDU68", "name": "team-ai-product-design-private" },
+    { "id": "C0B3D3Q8T34", "name": "team-ai-product-design" },
+    { "id": "C087DSU74ER", "name": "product-design" },
+    { "id": "C01LBUD42LE", "name": "team-product-design-private" },
+    { "id": "C0587R32AM9", "name": "ai-at-grafana" },
+    { "id": "C091B7EHXNU", "name": "grafana-ai-dev" }
+  ],
+  "lookback_hours": 24,
+  "model": "claude-opus-4-7"
+}

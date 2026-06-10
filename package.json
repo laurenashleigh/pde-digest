@@ -1,0 +1,18 @@
+{
+  "name": "pde-digest",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Daily Slack digest for the Grafana Product Design Engineering team. Reads recent activity from configured channels, summarizes it with Claude, and DMs the result to you.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "digest": "node src/digest.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.32.1",
+    "@slack/web-api": "^7.8.0"
+  },
+  "license": "MIT"
+}
