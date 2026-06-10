@@ -7,7 +7,8 @@
     { "id": "C087DSU74ER", "name": "product-design" },
     { "id": "C01LBUD42LE", "name": "team-product-design-private" },
     { "id": "C0587R32AM9", "name": "ai-at-grafana" },
-    { "id": "C091B7EHXNU", "name": "grafana-ai-dev" }
+    { "id": "C091B7EHXNU", "name": "grafana-ai-dev" },
+    { "id": "C0AT2GH7YDU", "name": "wg-assistant-workspace" }
   ],
   "lookback_hours": 24,
   "model": "claude-opus-4-7"
